@@ -5,19 +5,39 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [BookEntity::class],
-    version = 1,
+    entities = [BookEntity::class, TodoEntity::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(BookConverters::class)
 abstract class BookDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
+    abstract fun todoDao(): TodoDao
 
     companion object {
         @Volatile
         private var INSTANCE: BookDatabase? = null
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                CREATE TABLE IF NOT EXISTS `todos` (
+                    `id` INTEGER NOT NULL,
+                    `userId` INTEGER NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `completed` INTEGER NOT NULL,
+                    `syncedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                    """.trimIndent()
+                )
+            }
+        }
 
         fun getDatabase(context: Context): BookDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -25,7 +45,9 @@ abstract class BookDatabase : RoomDatabase() {
                     context.applicationContext,
                     BookDatabase::class.java,
                     "book_database"
-                ).build()
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
                 INSTANCE = instance
                 instance
             }

@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,7 +66,12 @@ fun MyBooksScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Мои книги") }
+                title = { Text("Мои книги") },
+                actions = {
+                    IconButton(onClick = viewModel::refreshRemoteBooks) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = "Обновить список")
+                    }
+                }
             )
         }
     ) { padding ->
@@ -98,6 +105,10 @@ fun MyBooksScreen(
             }
             when {
                 uiState.isLoading -> LoadingState()
+                uiState.errorMessage != null -> ErrorState(
+                    message = uiState.errorMessage.orEmpty(),
+                    onRetry = viewModel::refreshRemoteBooks
+                )
                 booksToDisplay.isEmpty() && uiState.remoteBooks.isEmpty() -> EmptyState("У вас пока нет скачанных книг")
                 booksToDisplay.isEmpty() -> EmptyState("Ничего не найдено")
                 else -> {
@@ -150,6 +161,29 @@ private fun EmptyState(message: String) {
         contentAlignment = Alignment.Center
     ) {
         Text(text = message, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(onClick = onRetry) {
+                Text("Повторить")
+            }
+        }
     }
 }
 

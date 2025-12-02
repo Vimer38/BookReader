@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class BooksUiState(
@@ -83,6 +84,35 @@ class BooksViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             bookRepository.getAllBooks().collect { books ->
                 _uiState.value = _uiState.value.copy(localBooks = books)
+            }
+        }
+    }
+
+    fun refreshRemoteBooks() {
+        val userId = auth.currentUser?.uid ?: run {
+            _uiState.value = _uiState.value.copy(errorMessage = "Необходима авторизация")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val snapshot = firestore.collection("books")
+                    .whereEqualTo("userId", userId)
+                    .get()
+                    .await()
+                val books = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(RemoteBook::class.java)?.copy(id = doc.id)
+                }
+                _uiState.value = _uiState.value.copy(
+                    remoteBooks = books,
+                    isLoading = false,
+                    errorMessage = null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.localizedMessage ?: "Не удалось обновить список"
+                )
             }
         }
     }

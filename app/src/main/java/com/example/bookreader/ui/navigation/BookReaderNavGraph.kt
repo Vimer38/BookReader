@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +36,8 @@ import com.example.bookreader.ui.profile.ProfileScreen
 import com.example.bookreader.ui.profile.ProfileViewModel
 import com.example.bookreader.ui.reader.ReaderScreen
 import com.example.bookreader.ui.reader.ReaderViewModel
+import com.example.bookreader.ui.todos.TodosScreen
+import com.example.bookreader.ui.todos.TodosViewModel
 import com.example.bookreader.ui.upload.UploadBookScreen
 import com.example.bookreader.ui.upload.UploadViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -54,6 +57,11 @@ private val mainDestinations = listOf(
         route = "profile",
         label = "Профиль",
         icon = { Icons.Outlined.Person }
+    ),
+    BottomDestination(
+        route = "todos",
+        label = "Задачи",
+        icon = { Icons.Outlined.ListAlt }
     )
 )
 
@@ -178,6 +186,10 @@ private fun MainShell(
                             requestLogout()
                         }
                     )
+                }
+                composable(mainDestinations[3].route) {
+                    val todosViewModel: TodosViewModel = hiltViewModel()
+                    TodosScreen(viewModel = todosViewModel)
                 }
             }
         }

@@ -112,6 +112,12 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("com.amazonaws:aws-android-sdk-core:2.73.0")
     implementation("com.amazonaws:aws-android-sdk-s3:2.73.0")
+
+    // Networking
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
     
     // Hilt
     implementation(libs.hilt.android)

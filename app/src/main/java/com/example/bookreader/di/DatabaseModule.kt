@@ -2,7 +2,11 @@ package com.example.bookreader.di
 
 import android.content.Context
 import com.example.bookreader.data.local.BookDatabase
+import com.example.bookreader.data.local.BookDao
+import com.example.bookreader.data.local.TodoDao
+import com.example.bookreader.data.remote.JsonPlaceholderApi
 import com.example.bookreader.data.repository.BookRepository
+import com.example.bookreader.data.repository.TodoRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +26,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideBookDao(database: BookDatabase) = database.bookDao()
+    fun provideBookDao(database: BookDatabase): BookDao = database.bookDao()
+
+    @Provides
+    @Singleton
+    fun provideTodoDao(database: BookDatabase): TodoDao = database.todoDao()
 
     @Provides
     @Singleton
@@ -33,10 +41,18 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideBookRepository(
-        bookDao: com.example.bookreader.data.local.BookDao,
+        bookDao: BookDao,
         booksDir: File
     ): BookRepository {
         return BookRepository(bookDao, booksDir)
     }
+
+    @Provides
+    @Singleton
+    fun provideTodoRepository(
+        database: BookDatabase,
+        todoDao: TodoDao,
+        api: JsonPlaceholderApi
+    ): TodoRepository = TodoRepository(api, todoDao, database)
 }
 
