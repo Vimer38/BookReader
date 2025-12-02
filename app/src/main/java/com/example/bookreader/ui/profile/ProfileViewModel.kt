@@ -1,17 +1,20 @@
 package com.example.bookreader.ui.profile
 
-import android.app.Application
+import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookreader.data.storage.YandexStorageManager
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ProfileUiState(
     val displayName: String = "",
@@ -24,11 +27,12 @@ sealed class ProfileEvent {
     data class Message(val text: String) : ProfileEvent()
 }
 
-class ProfileViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val auth = FirebaseAuth.getInstance()
-    private val yandexStorage = YandexStorageManager(application)
-
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val auth: FirebaseAuth,
+    private val yandexStorage: YandexStorageManager,
+    @ApplicationContext private val context: Context
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
@@ -56,7 +60,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 val objectKey = "avatars/${user.uid}/${System.currentTimeMillis()}.jpg"
                 val publicUrl = yandexStorage.upload(
                     uri = uri,
-                    contentResolver = getApplication<Application>().contentResolver,
+                    contentResolver = context.contentResolver,
                     objectKey = objectKey,
                     onProgress = {}
                 )

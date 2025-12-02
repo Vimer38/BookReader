@@ -2,11 +2,12 @@ package com.example.bookreader.ui.auth
 
 import android.app.Application
 import android.util.Patterns
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
 data class AuthUiState(
     val email: String = "",
@@ -30,9 +32,10 @@ sealed class AuthEvent {
     data class Error(val message: String) : AuthEvent()
 }
 
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val auth: FirebaseAuth
+) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
@@ -81,7 +84,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (_uiState.value.isLoginMode) {
                     auth.signInWithEmailAndPassword(email, password).await()
                 } else {
-                    // === РЕГИСТРАЦИЯ С ИМЕНЕМ ===
                     val username = _uiState.value.username.trim()
                     if (username.isEmpty()) {
                         _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = "Введите имя пользователя")
@@ -109,4 +111,3 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
-

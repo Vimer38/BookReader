@@ -1,15 +1,16 @@
 package com.example.bookreader.ui.upload
 
-import android.app.Application
+import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookreader.data.local.BookFileManager
 import com.example.bookreader.data.model.BookFormat
+import com.example.bookreader.data.repository.BookRepository
 import com.example.bookreader.data.storage.YandexStorageManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import java.util.UUID
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.UUID
+import javax.inject.Inject
 
 data class UploadUiState(
     val title: String = "",
@@ -35,12 +38,14 @@ sealed class UploadEvent {
     data object Success : UploadEvent()
 }
 
-class UploadViewModel(application: Application) : AndroidViewModel(application) {
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
-    private val fileManager = BookFileManager(application)
-    private val storageManager = YandexStorageManager(application)
-
+@HiltViewModel
+class UploadViewModel @Inject constructor(
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore,
+    private val bookRepository: BookRepository,
+    private val storageManager: YandexStorageManager,
+    @ApplicationContext private val context: Context
+) : ViewModel() {
     private val _uiState = MutableStateFlow(UploadUiState())
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
 
@@ -94,7 +99,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 try {
                     val downloadUrl = storageManager.upload(
                         uri = fileUri,
-                        contentResolver = getApplication<Application>().contentResolver,
+                        contentResolver = context.contentResolver,
                         objectKey = storagePath
                     ) { fraction ->
                         _uiState.value = _uiState.value.copy(progress = fraction)
@@ -114,12 +119,12 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                         .await()
 
                     withContext(Dispatchers.IO) {
-                        fileManager.importExternalBook(
+                        bookRepository.importExternalBook(
                             bookId = bookId,
                             title = title,
                             author = author,
                             format = format,
-                            contentResolver = getApplication<Application>().contentResolver,
+                            contentResolver = context.contentResolver,
                             sourceUri = fileUri
                         )
                     }
@@ -142,4 +147,3 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 }
-

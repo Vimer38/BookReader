@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.bookreader.ui.auth.AuthScreen
 import com.example.bookreader.ui.auth.AuthViewModel
 import com.example.bookreader.ui.auth.SplashScreen
@@ -72,7 +73,7 @@ fun BookReaderNavGraph(navController: NavHostController) {
             )
         }
         composable(Screen.Auth.route) {
-            val viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            val viewModel: AuthViewModel = hiltViewModel()
             AuthScreen(
                 viewModel = viewModel,
                 onSuccess = {
@@ -106,7 +107,7 @@ fun BookReaderNavGraph(navController: NavHostController) {
                 navArgument("format") { defaultValue = "TXT" }
             )
         ) {
-            val viewModel: ReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            val viewModel: ReaderViewModel = hiltViewModel()
             ReaderScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() }
@@ -158,20 +159,18 @@ private fun MainShell(
                 startDestination = mainDestinations.first().route
             ) {
                 composable(mainDestinations[0].route) {
-                    val viewModel: BooksViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+                    val viewModel: BooksViewModel = hiltViewModel()
                     MyBooksScreen(
                         viewModel = viewModel,
                         openBook = openReader
                     )
                 }
                 composable(mainDestinations[1].route) {
-                    val uploadViewModel: UploadViewModel =
-                        androidx.lifecycle.viewmodel.compose.viewModel()
+                    val uploadViewModel: UploadViewModel = hiltViewModel()
                     UploadBookScreen(viewModel = uploadViewModel)
                 }
                 composable(mainDestinations[2].route) {
-                    val profileViewModel: ProfileViewModel =
-                        androidx.lifecycle.viewmodel.compose.viewModel()
+                    val profileViewModel: ProfileViewModel = hiltViewModel()
                     ProfileScreen(
                         viewModel = profileViewModel,
                         onLogout = {

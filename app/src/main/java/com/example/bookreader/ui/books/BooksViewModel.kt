@@ -1,16 +1,16 @@
 package com.example.bookreader.ui.books
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookreader.data.local.BookFileManager
 import com.example.bookreader.data.model.BookFormat
 import com.example.bookreader.data.model.LocalBook
 import com.example.bookreader.data.model.RemoteBook
+import com.example.bookreader.data.repository.BookRepository
 import com.example.bookreader.data.storage.YandexStorageManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class BooksUiState(
     val isLoading: Boolean = true,
@@ -41,12 +42,13 @@ sealed class BooksEvent {
     data class Message(val text: String) : BooksEvent()
 }
 
-class BooksViewModel(application: Application) : AndroidViewModel(application) {
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
-    private val fileManager = BookFileManager(application)
-    private val storageManager = YandexStorageManager(application)
-
+@HiltViewModel
+class BooksViewModel @Inject constructor(
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore,
+    private val bookRepository: BookRepository,
+    private val storageManager: YandexStorageManager
+) : ViewModel() {
     private val _uiState = MutableStateFlow(BooksUiState())
     val uiState: StateFlow<BooksUiState> = _uiState.asStateFlow()
 
@@ -57,7 +59,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         observeBooks()
-        refreshLocal()
+        observeLocalBooks()
     }
 
     override fun onCleared() {
@@ -71,8 +73,17 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshLocal() {
         viewModelScope.launch(Dispatchers.IO) {
-            val books = fileManager.listLocalBooks()
-            _uiState.value = _uiState.value.copy(localBooks = books)
+            bookRepository.getAllBooks().collect { books ->
+                _uiState.value = _uiState.value.copy(localBooks = books)
+            }
+        }
+    }
+    
+    private fun observeLocalBooks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            bookRepository.getAllBooks().collect { books ->
+                _uiState.value = _uiState.value.copy(localBooks = books)
+            }
         }
     }
 
@@ -116,7 +127,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             val format = BookFormat.fromString(remoteBook.format)
-            val destination = fileManager.destinationFor(remoteBook.id, format)
+            val destination = bookRepository.getFile(remoteBook.id, format)
             _uiState.value = _uiState.value.copy(
                 downloads = _uiState.value.downloads + (remoteBook.id to 0)
             )
@@ -129,7 +140,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
                         downloads = _uiState.value.downloads + (remoteBook.id to progress)
                     )
                 }
-                fileManager.persistRemoteBook(remoteBook, format, destination)
+                bookRepository.insertRemoteBook(remoteBook, format, destination)
                 refreshLocal()
                 _events.send(BooksEvent.Message("Книга загружена"))
             } catch (e: Exception) {
@@ -145,7 +156,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteBook(bookId: String) {
         viewModelScope.launch {
-            val success = fileManager.deleteBook(bookId)
+            val success = bookRepository.deleteBook(bookId)
             if (success) {
                 refreshLocal()
                 _events.send(BooksEvent.Message("Файл удалён"))
@@ -155,4 +166,3 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
-

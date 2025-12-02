@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.kapt)
 }
 
 fun readLocalProperties(rootDir: File): Properties {
@@ -66,6 +68,10 @@ android {
         compose = true
         buildConfig = true
     }
+    
+    kapt {
+        correctErrorTypes = true
+    }
 }
 
 dependencies {
@@ -106,5 +112,14 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("com.amazonaws:aws-android-sdk-core:2.73.0")
     implementation("com.amazonaws:aws-android-sdk-s3:2.73.0")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    
+    // Hilt
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
 }

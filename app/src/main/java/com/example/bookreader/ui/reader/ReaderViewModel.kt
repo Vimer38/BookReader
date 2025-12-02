@@ -6,14 +6,15 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.text.Html
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookreader.data.model.BookFormat
 import com.example.bookreader.data.preferences.ReaderPreferences
 import com.example.bookreader.data.preferences.ReaderTheme
 import com.example.bookreader.data.preferences.ReadingPositionStore
 import com.example.bookreader.data.preferences.ReadingPreferencesStore
+import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.FileInputStream
 import java.net.URLDecoder
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ReaderUiState(
     val bookId: String = "",
@@ -41,13 +43,13 @@ data class ReaderUiState(
 
 data class PdfPage(val index: Int, val bitmap: Bitmap)
 
-class ReaderViewModel(
-    application: Application,
-    savedStateHandle: SavedStateHandle
-) : AndroidViewModel(application) {
-    private val preferencesStore = ReadingPreferencesStore(application)
+@HiltViewModel
+class ReaderViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val preferencesStore: ReadingPreferencesStore,
+    private val progressStore: ReadingPositionStore
+) : ViewModel() {
     private val args = ReaderArgs(savedStateHandle)
-    private val progressStore = ReadingPositionStore(getApplication())
 
     private val _uiState = MutableStateFlow(
         ReaderUiState(
@@ -149,25 +151,12 @@ class ReaderViewModel(
 
     private fun loadPdfContent(file: File) {
         val pages = mutableListOf<PdfPage>()
-        val context = getApplication<Application>().applicationContext
-        val metrics = context.resources.displayMetrics
-        val screenWidthPx = metrics.widthPixels
-
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
             PdfRenderer(descriptor).use { renderer ->
                 for (i in 0 until renderer.pageCount) {
                     renderer.openPage(i).use { page ->
-                        val pageWidth = page.width
-                        val pageHeight = page.height
-
-                        val scale = screenWidthPx.toFloat() / pageWidth.toFloat()
-                        val targetWidth = screenWidthPx
-                        val targetHeight = (pageHeight * scale).toInt()
-
-                        val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-
+                        val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
                         pages.add(PdfPage(i, bitmap))
                     }
                 }
@@ -223,4 +212,3 @@ private data class ReaderArgs(
         private fun decode(value: String?): String = value?.let { URLDecoder.decode(it, Charsets.UTF_8.name()) } ?: ""
     }
 }
-
